@@ -106,7 +106,7 @@ class Node45Topo(Topo):
  
 def simpleTest():
 	topo = Node45Topo()
-	net = Mininet(topo, link=TCLink)    #主要类来创建和管理网络
+	net = Mininet(topo, link=TCLink, autoStaticArp=True)    #主要类来创建和管理网络
 	mycontroller = RemoteController("c0", ip="127.0.0.1", port=6633)    #创建远程控制器
         net.controllers = [mycontroller]
         net.start()    #启动您的拓扑网络

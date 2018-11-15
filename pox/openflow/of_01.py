@@ -135,6 +135,7 @@ class OpenFlowHandlers (object):
 
     self._build_table()
 
+
   def handle_default (self, con, msg):
     pass
 
@@ -193,10 +194,35 @@ class DefaultOpenFlowHandlers (OpenFlowHandlers):
       con.raiseEventNoErrors(PortStatus, con, msg)
 
   @staticmethod
-  def handle_PACKET_IN (con, msg): #A
+  def handle_PACKET_IN (con, msg, event=1): #A
     e = con.ofnexus.raiseEventNoErrors(PacketIn, con, msg)
     if e is None or e.halt != True:
       con.raiseEventNoErrors(PacketIn, con, msg)
+    '''
+    print "Let's process this packet_in data..."
+    dpid = event.connection.dpid
+
+    packet = event.parsed
+    if packet.type == packet.ARP_TYPE:
+        if packet.payload.opcode == arp.REQUEST:
+            arp_reply = arp()
+            arp_reply.hwsrc = dpid_to_mac(dpid)
+            arp_reply.hwdst = packet.src
+            arp_reply.opcode = arp.REPLY
+            arp_reply.protosrc = packet.payload.protosrc
+            arp_reply.protodst = packet.payload.protosrc
+            ether = ethernet()
+            ether.type = ethernet.ARP_TYPE
+            ether.dst = packet.src
+            ether.src = dpid_to_mac(dpid)
+            ether.payload = arp_reply
+            #send this packet to the switch
+            #see section below on this topic
+        elif packet.payload.opcode == arp.REPLY:
+            print "It's a reply; do something cool"
+        else:
+            print "Some other ARP opcode, probably do something smart here"
+    '''
 
   @staticmethod
   def handle_ERROR (con, msg): #A
@@ -945,7 +971,7 @@ class Connection (EventMixin):
 
       try:
         h = self.handlers[ofp_type]
-        h(self, msg)
+        h(self, msg)    # new added parameter - event
       except:
         log.exception("%s: Exception while handling OpenFlow message:\n" +
                       "%s %s", self,self,
