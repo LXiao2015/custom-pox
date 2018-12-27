@@ -58,13 +58,13 @@ def sendToSwitchByNodeNumber(sw, fr, to, src, dst):
     # ICMP
     msg_icmp = of.ofp_flow_mod()
     msg_icmp.priority = 3    # 数字越大, 优先级越高
-    msg_icmp.match.dl_type = 0x0800
+    # msg_icmp.match.dl_type = 0x0800
     msg_icmp.match.nw_proto = 1
     msg_icmp.match.nw_src = src_ip
     msg_icmp.match.nw_dst = dst_ip
     msg_icmp.match.in_port = in_port
     msg_icmp.actions.append(of.ofp_action_output(port = out_port))
-
+    print("Sending rules to switch s%s..." % sw_no)
     core.openflow.connections[sw_no].send(msg_icmp)
 
 '''

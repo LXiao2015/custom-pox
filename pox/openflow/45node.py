@@ -8,6 +8,7 @@ from mininet.cli import CLI
 from mininet.node import RemoteController
 from mininet.link import TCLink
 import global_para as gl
+import lru
 import json
 # from global_para import gl
 
@@ -59,7 +60,7 @@ class Node45Topo(Topo):
                                 i += 1
 
 		# 连接核心交换机
-		self.addLink( switch[9], switch[10], port1=4, port2=4, **s_s )
+                self.addLink( switch[9], switch[10], port1=4, port2=4, **s_s )
                 gl.set_links(9 + hostNum + 1, 10 + hostNum + 1, 4)
                 gl.set_links(10 + hostNum + 1, 9 + hostNum + 1, 4)
                 self.addLink( switch[9], switch[11], port1=5, port2=4, **s_s )
@@ -75,11 +76,11 @@ class Node45Topo(Topo):
                 gl.set_links(10 + hostNum + 1, 12 + hostNum + 1, 6)
                 gl.set_links(12 + hostNum + 1, 10 + hostNum + 1, 2)
                 self.addLink( switch[11], switch[12], port1=6, port2=3, **s_s )
-		gl.set_links(11 + hostNum + 1, 12 + hostNum + 1, 6)
-		gl.set_links(12 + hostNum + 1, 11 + hostNum + 1, 3)
+                gl.set_links(11 + hostNum + 1, 12 + hostNum + 1, 6)
+                gl.set_links(12 + hostNum + 1, 11 + hostNum + 1, 3)
 
 		# 连接 nf
-		self.addLink( nf[0], switch[12], port1=1, port2=4, **h_s )
+                self.addLink( nf[0], switch[12], port1=1, port2=4, **h_s )
                 gl.set_links(0 + hostNum + switchNum + 1, 12 + hostNum + 1, 1)
                 gl.set_links(12 + hostNum + 1, 0 + hostNum + switchNum + 1, 4)
                 self.addLink( nf[1], switch[2], port1=1, port2=5, **h_s )
@@ -95,29 +96,32 @@ class Node45Topo(Topo):
                 gl.set_links(4 + hostNum + switchNum + 1, 12 + hostNum + 1, 1)
                 gl.set_links(12 + hostNum + 1, 4 + hostNum + switchNum + 1, 5)
 
-		gl.del_node(0)
-		gl.print_links()
+                gl.del_node(0)
+                # gl.print_links()
                 jsondata = json.dumps(gl.graph)
-		f = open("port.json", "w")
+                f = open("port.json", "w")
                 f.writelines(jsondata)
-		# print("gl.graph[33][16]: ", gl.graph[33][16])
+                # print("gl.graph[33][16]: ", gl.graph[33][16])
                 # print(self.linksBetween( host[1], switch[0] ))
 
  
 def simpleTest():
-	topo = Node45Topo()
-	net = Mininet(topo, link=TCLink, autoStaticArp=True)    #主要类来创建和管理网络
-	mycontroller = RemoteController("c0", ip="127.0.0.1", port=6633)    #创建远程控制器
+        topo = Node45Topo()
+        net = Mininet(topo, link=TCLink, autoStaticArp=True)    #主要类来创建和管理网络
+        mycontroller = RemoteController("c0", ip="127.0.0.1", port=6633)    #创建远程控制器
         net.controllers = [mycontroller]
         net.start()    #启动您的拓扑网络
-	print "Dumping host connections"
-	dumpNodeConnections(net.hosts)       #转存文件连接
-	print "Testing network connectivity"     
-	# net.pingAll()    #所有节点彼此测试互连
-	CLI(net)		#进入mininet>提示符 
-	net.stop()       #停止您的网络
+        print "***Dumping host connections"
+        dumpNodeConnections(net.hosts)       #转存文件连接
+        # print "Testing network connectivity"     
+        # net.pingAll()    #所有节点彼此测试互连
+        CLI(net)		#进入mininet>提示符 
+        net.stop()       #停止您的网络
 
  		
 if __name__ == '__main__':
-	setLogLevel('info')  # 设置 Mininet 默认输出级别，设置 info 它将提供一些有用的信息
+        setLogLevel('info')  # 设置 Mininet 默认输出级别，设置 info 它将提供一些有用的信息
 	simpleTest()
+        print("Removing...")
+	for i in range(1, gl.switchNum + 1):
+	    remove_rules('s%d' % i)
