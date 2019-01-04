@@ -1,0 +1,3 @@
+2019-01-04T09:05:31Z|00001|ofp_util|INFO|normalization changed ofp_match, details:
+2019-01-04T09:05:31Z|00002|ofp_util|INFO| pre: in_port=6,nw_src=10.0.0.17
+2019-01-04T09:05:31Z|00003|ofp_util|INFO|post: in_port=6

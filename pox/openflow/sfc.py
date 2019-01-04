@@ -25,7 +25,7 @@ any other component references it during initialization.
 from pox.core import core
 import pox
 import pox.lib.util
-from pox.lib.addresses import EthAddr
+from pox.lib.addresses import EthAddr, IPAddr
 from pox.lib.revent.revent import EventMixin
 import datetime
 import time
@@ -33,6 +33,8 @@ from pox.lib.socketcapture import CaptureSocket
 import pox.openflow.debug
 from pox.openflow.util import make_type_to_unpacker_table
 from pox.openflow import *
+import pox.lib.packet as pkt
+import pox.openflow.libopenflow_01 as of
 
 log = core.getLogger()
 
@@ -56,7 +58,7 @@ except:
     PIPE_BUF = 512
 
 import pox.openflow.libopenflow_01 as of
-
+import thread
 import threading
 import os
 import sys
@@ -194,36 +196,40 @@ class DefaultOpenFlowHandlers (OpenFlowHandlers):
       con.raiseEventNoErrors(PortStatus, con, msg)
 
   @staticmethod
-  def handle_PACKET_IN (con, msg, event=1): #A
+  def handle_PACKET_IN (con, msg): #A
     e = con.ofnexus.raiseEventNoErrors(PacketIn, con, msg)
     if e is None or e.halt != True:
       con.raiseEventNoErrors(PacketIn, con, msg)
-    '''
-    print "Let's process this packet_in data..."
-    dpid = event.connection.dpid
+   
+    print("Let's process this packet_in data...")
+    dpid = con.dpid    # get DPID
+    my_match = of.ofp_match.from_packet(msg)
+    dst_ip = my_match.get_nw_dst()[0]
+    src_ip = my_match.get_nw_src()[0]
+    print("%s -> %s" % (src_ip, dst_ip))
 
-    packet = event.parsed
-    if packet.type == packet.ARP_TYPE:
-        if packet.payload.opcode == arp.REQUEST:
-            arp_reply = arp()
-            arp_reply.hwsrc = dpid_to_mac(dpid)
-            arp_reply.hwdst = packet.src
-            arp_reply.opcode = arp.REPLY
-            arp_reply.protosrc = packet.payload.protosrc
-            arp_reply.protodst = packet.payload.protosrc
-            ether = ethernet()
-            ether.type = ethernet.ARP_TYPE
-            ether.dst = packet.src
-            ether.src = dpid_to_mac(dpid)
-            ether.payload = arp_reply
-            #send this packet to the switch
-            #see section below on this topic
-        elif packet.payload.opcode == arp.REPLY:
-            print "It's a reply; do something cool"
-        else:
-            print "Some other ARP opcode, probably do something smart here"
-    '''
+    out_port = of.OFPP_NONE
 
+    print("Then send a flow table...")
+    if isinstance(dst_ip, IPAddr):
+        # print("dst_ip is IPAddr object")
+        in_port = msg.in_port
+        out_port = cc.findPath(in_port, dpid, src_ip.toStr(), dst_ip.toStr())
+    else:
+        print("dst_ip isn't IPAddr object")
+
+    # 生成packet_out消息
+    packet_out = of.ofp_packet_out()
+    packet_out.buffer_id = msg.buffer_id
+    packet_out.in_port = msg.in_port
+
+    # Add an action to send to the specified port
+    # action = of.ofp_action_output(port = of.OFPP_FLOOD)
+    print("out_port: ", out_port)
+    action = of.ofp_action_output(port = out_port)
+    packet_out.actions.append(action)
+    con.send(packet_out)
+			
   @staticmethod
   def handle_ERROR (con, msg): #A
     err = ErrorIn(con, msg)
@@ -406,8 +412,7 @@ class HandshakeOpenFlowHandlers (OpenFlowHandlers):
     # print("%d switches connected!" % len(allConn))
     if len(allConn) == gl.switchNum + gl.nfNum:
         print("All switches: ", allConn)
-        cc.formPath()
-
+        thread.start_new_thread( cc.formPath, () )
 
     con.connect_time = time.time()
     con.handlers = _default_handlers.handlers
@@ -971,7 +976,7 @@ class Connection (EventMixin):
 
       try:
         h = self.handlers[ofp_type]
-        h(self, msg)    # new added parameter - event
+        h(self, msg)
       except:
         log.exception("%s: Exception while handling OpenFlow message:\n" +
                       "%s %s", self,self,
@@ -1262,4 +1267,5 @@ def launch (port=6633, address="0.0.0.0", name=None,
                        ssl_key = private_key, ssl_cert = certificate,
                        ssl_ca_cert = ca_cert)
   core.register(name, l)
+
   return l

@@ -14,7 +14,6 @@ def readInPortMapping():
     f.close()
 
 import global_para as gl
-# from global_para import gl
 
 def sendFlowTable(pathList):
     readInPortMapping()
@@ -24,14 +23,20 @@ def sendFlowTable(pathList):
     # conn = core.openflow.connections.keys()
 
 def sendSFCFlowTable(pathList):
+    allConn = core.openflow.connections.keys()
+    print("All switches still connected: ", allConn)
     print("Send SFC Flow Tables...")
+    pri = gl.get_pri()
     for path in pathList:
         pathLen = len(path)
         # print("path length: %d" % pathLen)
         for i in range(1, pathLen - 1):
-            # curNode, preNode, nextNode, dst
-            sendToSwitchByNodeNumber(path[i], path[i - 1], path[i + 1], path[0], path[pathLen - 1])
-            sendToSwitchByNodeNumber(path[i], path[i + 1], path[i - 1], path[pathLen - 1], path[0])
+            # curNode, preNode, nextNode, dst, priority
+            print("Send flow table between %s - %s - %s." % (path[i-1], path[i], path[i+1]))
+            sendToSwitchByNodeNumber(path[i], path[i - 1], path[i + 1], path[0], path[pathLen - 1], pri)
+            sendToSwitchByNodeNumber(path[i], path[i + 1], path[i - 1], path[pathLen - 1], path[0], pri)
+    allConn = core.openflow.connections.keys()
+    print("All switches still connected: ", allConn)
 
 '''
 def sendARPFlowTable(pathList):
@@ -48,24 +53,25 @@ def getPort(sw, neighbor):
         print("Wrong node number! neighbor: %s" % neighbor)
     return graph[sw][neighbor]
 
-def sendToSwitchByNodeNumber(sw, fr, to, src, dst):
+def sendToSwitchByNodeNumber(sw, fr, to, src, dst, pri):
     src_ip = "10.0.0." + src
     dst_ip = "10.0.0." + dst
     in_port = getPort(sw, fr)
     out_port = getPort(sw, to)
     sw_no = int(sw) - gl.hostNum
 
-    # ICMP
+    # ip 未指定协议
     msg_icmp = of.ofp_flow_mod()
-    msg_icmp.priority = 3    # 数字越大, 优先级越高
-    # msg_icmp.match.dl_type = 0x0800
-    msg_icmp.match.nw_proto = 1
+    msg_icmp.priority = pri    # 数字越大, 优先级越高
+    msg_icmp.match.dl_type = 0x0800
+    msg_icmp.match.nw_proto = pkt.ipv4.UDP_PROTOCOL
     msg_icmp.match.nw_src = src_ip
     msg_icmp.match.nw_dst = dst_ip
     msg_icmp.match.in_port = in_port
     msg_icmp.actions.append(of.ofp_action_output(port = out_port))
     print("Sending rules to switch s%s..." % sw_no)
     core.openflow.connections[sw_no].send(msg_icmp)
+
 
 '''
 def sendToEdgeSwitch(edge, src, dst):

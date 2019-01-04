@@ -10,10 +10,10 @@ from mininet.link import TCLink
 import global_para as gl
 import lru
 import json
-# from global_para import gl
+import thread
 
-h_s = dict(bw=80)
-s_s = dict(bw=40)
+h_s = dict(bw=5000)
+s_s = dict(bw=2500)
 
 gl._init()
 
@@ -103,7 +103,6 @@ class Node45Topo(Topo):
                 f.writelines(jsondata)
                 # print("gl.graph[33][16]: ", gl.graph[33][16])
                 # print(self.linksBetween( host[1], switch[0] ))
-
  
 def simpleTest():
         topo = Node45Topo()
@@ -115,6 +114,11 @@ def simpleTest():
         dumpNodeConnections(net.hosts)       #转存文件连接
         # print "Testing network connectivity"     
         # net.pingAll()    #所有节点彼此测试互连
+        try:
+            for i in range(1, gl.switchNum + 1):
+                thread.start_new_thread( lru.remo, ('s%d' % i, ) )
+        except:
+            print "Error: unable to start thread"
         CLI(net)		#进入mininet>提示符 
         net.stop()       #停止您的网络
 
@@ -122,6 +126,3 @@ def simpleTest():
 if __name__ == '__main__':
         setLogLevel('info')  # 设置 Mininet 默认输出级别，设置 info 它将提供一些有用的信息
 	simpleTest()
-        print("Removing...")
-	for i in range(1, gl.switchNum + 1):
-	    remove_rules('s%d' % i)
