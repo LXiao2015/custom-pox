@@ -25,14 +25,14 @@ def joint(d):
 
 def remo(sw):
     tik = 60
-    
+    '''
     # print("Thread sw stared.")
     while True:
         time.sleep(1)
         tik = (tik - 1 + delay) % delay
         if tik == 0:
             remove_rules(sw)
-    
+    '''
 
 def remove_rules(sw):
     ret = subprocess.check_output("sudo ovs-ofctl dump-flows %s" % sw, shell=True)

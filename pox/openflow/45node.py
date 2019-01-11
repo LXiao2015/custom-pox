@@ -11,9 +11,11 @@ import global_para as gl
 import lru
 import json
 import thread
+import os
+import time
 
-h_s = dict(bw=5000)
-s_s = dict(bw=2500)
+h_s = dict(bw=1000)
+s_s = dict(bw=1000)
 
 gl._init()
 
@@ -110,17 +112,41 @@ def simpleTest():
         mycontroller = RemoteController("c0", ip="127.0.0.1", port=6633)    #创建远程控制器
         net.controllers = [mycontroller]
         net.start()    #启动您的拓扑网络
+        net_start_time = time.time()
         print "***Dumping host connections"
-        dumpNodeConnections(net.hosts)       #转存文件连接
+        # dumpNodeConnections(net.hosts)       #转存文件连接
         # print "Testing network connectivity"     
         # net.pingAll()    #所有节点彼此测试互连
+
         try:
             for i in range(1, gl.switchNum + 1):
                 thread.start_new_thread( lru.remo, ('s%d' % i, ) )
         except:
             print "Error: unable to start thread"
+
+        path = "/home/ubuntu/cppalg/output/demandAndPath.txt"
+        if os.path.exists(path) == True:
+            try_time = 10000000
+            print(os.path.getmtime(path))
+            print(net_start_time)
+            while os.path.getmtime(path) < net_start_time:
+                try_time = try_time - 1
+                if try_time < 0:
+                    break
+            if os.path.getmtime(path) > net_start_time:
+                with open(path, "r") as f:
+                    lines = f.read().split('\n')
+                    for perline in lines:
+                        # 读取第二个和最后一个数，如果不相等，iperfudp
+                        if perline != "":
+                            line = perline.split()
+                            print(line)
+                            if len(line) > 1 and line[1] != line[-1]:
+                                print("Log iperf UDP for: ", line[1], line[-1])
+                                hs, hd = net.get('h%s'%line[1], 'h%s'%line[-1])
+                                net.iperf( (hs, hd), 'UDP', '%sM'%line[0], None, 3, 5566 )
         CLI(net)		#进入mininet>提示符 
-        net.stop()       #停止您的网络
+        net.stop()       #停止网络
 
  		
 if __name__ == '__main__':

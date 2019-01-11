@@ -170,6 +170,37 @@ class OpenFlowHandlers (object):
       assert from_switch, "%s is not switch-to-controller message" % (name,)
       self.add_handler(of_type, h)
 
+def req_for_stats():
+    tik = 30
+    while True:
+        time.sleep(1)
+        tik = (tik - 1 + 30) % 30
+        if tik == 0:
+            allCon = core.openflow.connections
+            for con in allCon:
+                con.send(of.ofp_stats_request(body=of.ofp_flow_stats_request()))
+                con.send(of.ofp_stats_request(body=of.ofp_port_stats_request()))
+
+def getTheTime():
+    #设定当地时间的函数
+    flock = time.localtime() 
+    then = "[%s-%s-%s" % (str(flock.tm_year), str(flock.tm_mon), str(flock.tm_mday))
+
+    if int(flock.tm_hour) < 10:
+        hrs = "0%s" % (str(flock.tm_hour))
+    else:
+        hrs = str(flock.tm_hour)
+        if int(flock.tm_min) < 10:
+            mins = "0%s" % (str(flock.tm_min))
+        else:
+            mins = str(flock.tm_min)
+    if int(flock.tm_sec) < 10:
+        secs = "0%s" % (str(flock.tm_sec))
+    else:
+        secs = str(flock.tm_sec)
+        then += "]%s.%s.%s" % (hrs,mins,secs)
+    return then
+
 
 class DefaultOpenFlowHandlers (OpenFlowHandlers):
   """
@@ -185,6 +216,16 @@ class DefaultOpenFlowHandlers (OpenFlowHandlers):
       con.raiseEventNoErrors(RawStatsReply, con, msg)
     con._incoming_stats_reply(msg)
 
+    dpid = con.dpid
+    if msg.type == of.OFPST_FLOW:
+        for f in msg.body:
+            pkts = f.packet_count
+            byts = f.byte_count
+            # if input_pkts != 0:
+                # print("[byte, packet]: [", f.byte_count, f.packet_count, "]")
+                # print(getTheTime(), "dpid, Path Loss Rate =", (input_pkts - output_pkts) * 1.0 / input_pkts * 100, "%")
+
+
   @staticmethod
   def handle_PORT_STATUS (con, msg): #A
     if msg.reason == of.OFPPR_DELETE:
@@ -194,6 +235,7 @@ class DefaultOpenFlowHandlers (OpenFlowHandlers):
     e = con.ofnexus.raiseEventNoErrors(PortStatus, con, msg)
     if e is None or e.halt != True:
       con.raiseEventNoErrors(PortStatus, con, msg)
+
 
   @staticmethod
   def handle_PACKET_IN (con, msg): #A
@@ -224,10 +266,12 @@ class DefaultOpenFlowHandlers (OpenFlowHandlers):
     packet_out.in_port = msg.in_port
 
     # Add an action to send to the specified port
-    # action = of.ofp_action_output(port = of.OFPP_FLOOD)
-    print("out_port: ", out_port)
-    action = of.ofp_action_output(port = out_port)
-    packet_out.actions.append(action)
+    # 没有 action 则代表丢弃数据包
+    if out_port != of.OFPP_NONE:
+        print("out_port: ", out_port)
+        action = of.ofp_action_output(port = out_port)
+        packet_out.actions.append(action)
+
     con.send(packet_out)
 			
   @staticmethod
@@ -407,12 +451,12 @@ class HandshakeOpenFlowHandlers (OpenFlowHandlers):
     '''
     自己加的在这里
     '''
-
     allConn = core.openflow.connections.keys()
     # print("%d switches connected!" % len(allConn))
     if len(allConn) == gl.switchNum + gl.nfNum:
         print("All switches: ", allConn)
         thread.start_new_thread( cc.formPath, () )
+        thread.start_new_thread( req_for_stats, () )
 
     con.connect_time = time.time()
     con.handlers = _default_handlers.handlers

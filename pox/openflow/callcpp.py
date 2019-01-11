@@ -28,19 +28,16 @@ def formPath():
         pathList = readIn()
         dis.sendFlowTable(pathList)
         print("Do you want to add more chains? (Y or N)")
-        # r = raw_input()
-    """
+        r = raw_input()
     while r == "Y" or r == "y" or r == "yes" or r == "Yes" or r == "YES":
         print("One line per session, Enter the source node, sink node, service type and bandwidth in turn, separated by spaces.")
         print("Type # to end the input.")
         f = open('/home/ubuntu/cppalg/input/input_chains.txt', 'w')
-        '''
         r = raw_input()
         while r != '#':
-	    #f.write(r + '\n')
+	    f.write(r + '\n')
 	    r = raw_input()
         f.close()
-        '''
         print("All input received. MDP algorithm start...")
         
         try:
@@ -57,10 +54,9 @@ def formPath():
         
         print("Get results...")
         pathList = readIn()
-		dis.sendFlowTable(pathList)
+        dis.sendFlowTable(pathList)
         print("Do you want to add more chains? (Y or N)")
         r = raw_input()
-    """
 
 def findPath(in_port, sw, src_ip, dst_ip):
     sw_node = gl.hostNum + sw
