@@ -84,24 +84,29 @@ class Node45Topo(Topo):
 		# 连接 nf
                 self.addLink( nf[0], switch[12], port1=1, port2=4, **h_s )
                 gl.set_links(0 + hostNum + switchNum + 1, 12 + hostNum + 1, 1)
-                gl.set_links(12 + hostNum + 1, 0 + hostNum + switchNum + 1, 4)
+                self.addLink( switch[12], nf[0], port1=5, port2=2, **h_s )
+                gl.set_links(12 + hostNum + 1, 0 + hostNum + switchNum + 1, 5)
                 self.addLink( nf[1], switch[2], port1=1, port2=5, **h_s )
                 gl.set_links(1 + hostNum + switchNum + 1, 2 + hostNum + 1, 1)
-                gl.set_links(2 + hostNum + 1, 1 + hostNum + switchNum + 1, 5)
+                self.addLink( switch[2], nf[1], port1=6, port2=2, **h_s )
+                gl.set_links(2 + hostNum + 1, 1 + hostNum + switchNum + 1, 6)
                 self.addLink( nf[2], switch[5], port1=1, port2=5, **h_s )
                 gl.set_links(2 + hostNum + switchNum + 1, 5 + hostNum + 1, 1)
-                gl.set_links(5 + hostNum + 1, 2 + hostNum + switchNum + 1, 5)
+                self.addLink( switch[5], nf[2], port1=6, port2=2, **h_s )
+                gl.set_links(5 + hostNum + 1, 2 + hostNum + switchNum + 1, 6)
                 self.addLink( nf[3], switch[8], port1=1, port2=5, **h_s )
                 gl.set_links(3 + hostNum + switchNum + 1, 8 + hostNum + 1, 1)
-                gl.set_links(8 + hostNum + 1, 3 + hostNum + switchNum + 1, 5)
-                self.addLink( nf[4], switch[12], port1=1, port2=5, **h_s )
+                self.addLink( switch[8], nf[3], port1=6, port2=2, **h_s )
+                gl.set_links(8 + hostNum + 1, 3 + hostNum + switchNum + 1, 6)
+                self.addLink( nf[4], switch[12], port1=1, port2=6, **h_s )
                 gl.set_links(4 + hostNum + switchNum + 1, 12 + hostNum + 1, 1)
-                gl.set_links(12 + hostNum + 1, 4 + hostNum + switchNum + 1, 5)
+                self.addLink( switch[12], nf[4], port1=7, port2=2, **h_s )
+                gl.set_links(12 + hostNum + 1, 4 + hostNum + switchNum + 1, 7)
 
                 gl.del_node(0)
                 # gl.print_links()
                 jsondata = json.dumps(gl.graph)
-                f = open("port.json", "w")
+                f = open("/home/ubuntu/pox/pox/openflow/port.json", "w")
                 f.writelines(jsondata)
                 # print("gl.graph[33][16]: ", gl.graph[33][16])
                 # print(self.linksBetween( host[1], switch[0] ))
@@ -126,7 +131,7 @@ def simpleTest():
 
         path = "/home/ubuntu/cppalg/output/demandAndPath.txt"
         if os.path.exists(path) == True:
-            try_time = 10000000
+            try_time = 100
             print(os.path.getmtime(path))
             print(net_start_time)
             while os.path.getmtime(path) < net_start_time:

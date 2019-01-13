@@ -4,8 +4,6 @@ import distribute as dis
 import global_para as gl
 import pox.openflow.libopenflow_01 as of
 
-pathList = []
-demandList = []
 
 # call algorithm to form paths
 def formPath():
@@ -25,8 +23,8 @@ def formPath():
             out.write(ret)
         '''
         print("Get results...")
-        pathList = readIn()
-        dis.sendFlowTable(pathList)
+        pathList, ToSList = readIn()
+        dis.sendFlowTable(pathList, ToSList)
         print("Do you want to add more chains? (Y or N)")
         r = raw_input()
     while r == "Y" or r == "y" or r == "yes" or r == "Yes" or r == "YES":
@@ -53,8 +51,8 @@ def formPath():
         out.close()
         
         print("Get results...")
-        pathList = readIn()
-        dis.sendFlowTable(pathList)
+        pathList, ToSList = readIn()
+        dis.sendFlowTable(pathList, ToSList)
         print("Do you want to add more chains? (Y or N)")
         r = raw_input()
 
@@ -68,15 +66,16 @@ def findPath(in_port, sw, src_ip, dst_ip):
         return of.OFPP_NONE
     src_node = src_ip_list[3]
     dst_node = dst_ip_list[3]
-    pathList = readIn()
+    pathList, ToSList = readIn()
+    session_count = 0
     for p in pathList:
         if p[0] == src_node and p[len(p) - 1] == dst_node:
             for i in range(1, len(p) - 1):
                 if p[i] == str(sw_node):
                     # curNode, preNode, nextNode, dst, priority
                     print("Send flow table between %s - %s - %s." % (p[i-1], p[i], p[i+1]))
-                    dis.sendToSwitchByNodeNumber(p[i], p[i - 1], p[i + 1], src_node, dst_node, 1)
-                    dis.sendToSwitchByNodeNumber(p[i], p[i + 1], p[i - 1], dst_node, src_node, 1)
+                    dis.sendToSwitchByNodeNumber(p[i], p[i - 1], p[i + 1], src_node, dst_node, 1, ToSList[session_count])
+                    dis.sendToSwitchByNodeNumber(p[i], p[i + 1], p[i - 1], dst_node, src_node, 1, ToSList[session_count])
                     return dis.getPort(str(sw_node), p[i + 1])
         if p[0] == dst_node and p[len(p) - 1] == src_node:
             p.reverse()
@@ -84,14 +83,15 @@ def findPath(in_port, sw, src_ip, dst_ip):
                 if p[i] == str(sw_node):
                     # curNode, preNode, nextNode, dst, priority
                     print("Send flow table between %s - %s - %s." % (p[i-1], p[i], p[i+1]))
-                    dis.sendToSwitchByNodeNumber(p[i], p[i - 1], p[i + 1], src_node, dst_node, 1)
-                    dis.sendToSwitchByNodeNumber(p[i], p[i + 1], p[i - 1], dst_node, src_node, 1)
+                    dis.sendToSwitchByNodeNumber(p[i], p[i - 1], p[i + 1], src_node, dst_node, 1, ToSList[session_count])
+                    dis.sendToSwitchByNodeNumber(p[i], p[i + 1], p[i - 1], dst_node, src_node, 1, ToSList[session_count])
                     return dis.getPort(str(sw_node), p[i + 1])
+        session_count = session_count + 1
     return of.OFPP_NONE
 
 # read paths from output file
 def readIn():
-    demandList = []
+    ToSList = []
     pathList = []
     with open('/home/ubuntu/cppalg/output/demandAndPath.txt', 'r') as f:
 	for line in f:
@@ -99,9 +99,9 @@ def readIn():
                 print("Format error in demandAndPath.txt file!")
                 continue
             res = line.split()
-            demandList.append(res[0])
+            ToSList.append(int(res[0]))
 	    pathList.append(res[1:])
     # print(demandList)
     print(pathList)
-    return pathList
     # dis.sendFlowTable(pathList)
+    return pathList, ToSList
