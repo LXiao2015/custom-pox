@@ -2075,13 +2075,17 @@ class ofp_action_vendor_base (ofp_action_base):
     return outstr
 
 
-@openflow_action('OFPAT_VENDOR', 65535)
+@openflow_action('OFPAT_VENDOR', 11)
 class ofp_action_vendor_generic (ofp_action_base):
   def __init__ (self, **kw):
     self.vendor = 0
     self.body = b""
 
     initHelper(self, kw)
+    self.pack()
+    # self.len = self.__len__()
+    self.vendor = 7
+    # print(self.show("---"))
 
   def _pack_body (self):
     if hasattr(self.body, 'pack'):

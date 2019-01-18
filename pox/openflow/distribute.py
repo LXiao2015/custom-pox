@@ -15,14 +15,14 @@ def readInPortMapping():
 
 import global_para as gl
 
-def sendFlowTable(pathList, ToSList):
+def sendFlowTable(pathList, typeList, ToSList):
     readInPortMapping()
     print(graph)
-    sendSFCFlowTable(pathList, ToSList)
+    sendSFCFlowTable(pathList, typeList, ToSList)
     # sendARPFlowTable(pathList)
     # conn = core.openflow.connections.keys()
 
-def sendSFCFlowTable(pathList, ToS):
+def sendSFCFlowTable(pathList, tp, ToS):
     allConn = core.openflow.connections.keys()
     print("All switches still connected: ", allConn)
     print("Send SFC Flow Tables...")
@@ -30,12 +30,21 @@ def sendSFCFlowTable(pathList, ToS):
     session_count = 0
     for path in pathList:
         pathLen = len(path)
+        processed = False
         # print("path length: %d" % pathLen)
         for i in range(1, pathLen - 1):
             # curNode, preNode, nextNode, dst, priority
             print("Send flow table between %s - %s - %s." % (path[i-1], path[i], path[i+1]))
-            sendToSwitchByNodeNumber(path[i], path[i - 1], path[i + 1], path[0], path[pathLen - 1], pri, ToS[session_count])
-            sendToSwitchByNodeNumber(path[i], path[i + 1], path[i - 1], path[pathLen - 1], path[0], pri, ToS[session_count])
+            if int(path[i]) <= 45 and int(path[i]) >= 41:
+                processed = True
+                sendToSwitchByNodeNumber(path[i], path[i - 1], path[i + 1], path[0], path[pathLen - 1], pri, tp[session_count], ToS[session_count])
+                sendToSwitchByNodeNumber(path[i], path[i + 1], path[i - 1], path[pathLen - 1], path[0], pri, tp[session_count], ToS[session_count])
+            elif processed == True:
+                sendToSwitchByNodeNumber(path[i], path[i - 1], path[i + 1], path[0], path[pathLen - 1], pri, ToS[session_count], ToS[session_count])
+                sendToSwitchByNodeNumber(path[i], path[i + 1], path[i - 1], path[pathLen - 1], path[0], pri, tp[session_count], ToS[session_count])
+            else:
+                sendToSwitchByNodeNumber(path[i], path[i - 1], path[i + 1], path[0], path[pathLen - 1], pri, tp[session_count], ToS[session_count])
+                sendToSwitchByNodeNumber(path[i], path[i + 1], path[i - 1], path[pathLen - 1], path[0], pri, ToS[session_count], ToS[session_count])
         session_count = session_count + 1
     allConn = core.openflow.connections.keys()
     print("All switches still connected: ", allConn)
@@ -59,7 +68,7 @@ def getPort(sw, neighbor, inport=0):
         return graph[sw][neighbor] - 1
     return graph[sw][neighbor]
 
-def sendToSwitchByNodeNumber(sw, fr, to, src, dst, pri, ToS):
+def sendToSwitchByNodeNumber(sw, fr, to, src, dst, pri, tp, ToS):
     src_ip = "10.0.0." + src
     dst_ip = "10.0.0." + dst
     in_port = getPort(sw, fr, 1)
@@ -74,9 +83,11 @@ def sendToSwitchByNodeNumber(sw, fr, to, src, dst, pri, ToS):
     msg_udp.match.nw_src = src_ip
     msg_udp.match.nw_dst = dst_ip
     msg_udp.match.in_port = in_port
+    msg_udp.match.nw_tos = tp
     if int(sw) <= 45 and int(sw) >= 41:
         print(sw, " modifies ToS.")
         msg_udp.actions.append(of.ofp_action_nw_tos(nw_tos = ToS))
+        # msg_udp.actions.append(of.ofp_action_vendor_generic(body = " SFP is %s " % ToS))
     msg_udp.actions.append(of.ofp_action_output(port = out_port))
     print("Sending rules to switch s%s..." % sw_no)
     core.openflow.connections[sw_no].send(msg_udp)
